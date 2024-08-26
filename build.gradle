@@ -1,0 +1,63 @@
+plugins {
+    id 'java'
+    id 'jacoco'
+}
+
+group = 'com.example'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'ru.clevertec:Utils:1.3.5'
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacoco {
+    toolVersion = "0.8.12"
+    reportsDirectory = layout.buildDirectory.dir('customJacocoReportDir')
+}
+// not worked(((
+jacocoTestReport {
+    classDirectories.setFrom(fileTree(dir: "**/classes/java/main") {
+        exclude '**/Utils.<init>*' // Исключить только конструктор
+    })
+}
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'jacoco'
+
+    test {
+       finalizedBy 'jacocoTestReport'
+    }
+    jacocoTestReport {
+        dependsOn test
+        reports {
+            xml.required = false
+            csv.required = false
+            html.outputLocation = layout.buildDirectory.dir('jacocoHtml')
+        }
+    }
+}
+
+
+tasks.register('jacocoRootReport', JacocoReport) {
+    dependsOn subprojects*.jacocoTestReport
+    additionalSourceDirs.from files(subprojects.sourceSets.main.allSource.srcDirs)
+    sourceDirectories.from files(subprojects.sourceSets.main.allSource.srcDirs)
+    classDirectories.from files(subprojects.sourceSets.main.output)
+    executionData.from files(subprojects.jacocoTestReport.executionData)
+}
+
+tasks.jacocoTestReport {
+   finalizedBy jacocoRootReport
+}
